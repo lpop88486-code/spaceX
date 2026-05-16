@@ -1,0 +1,16 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="32" fill="#000000"/>
+  <!-- Outer glow ring -->
+  <circle cx="90" cy="90" r="72" stroke="#00D4FF" stroke-width="2" opacity="0.15"/>
+  <!-- Globe lines -->
+  <circle cx="90" cy="90" r="52" stroke="#00D4FF" stroke-width="3" opacity="0.9"/>
+  <path d="M38 90 Q90 42 142 90" stroke="#00D4FF" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M38 90 Q90 138 142 90" stroke="#00D4FF" stroke-width="2" fill="none" opacity="0.6"/>
+  <line x1="90" y1="38" x2="90" y2="142" stroke="#00D4FF" stroke-width="2" opacity="0.5"/>
+  <line x1="38" y1="90" x2="142" y2="90" stroke="#00D4FF" stroke-width="2" opacity="0.5"/>
+  <!-- Satellite orbit arc -->
+  <path d="M55 45 Q110 30 130 80" stroke="#00D4FF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <!-- Satellite dot -->
+  <circle cx="130" cy="80" r="7" fill="#00D4FF"/>
+  <circle cx="130" cy="80" r="11" stroke="#00D4FF" stroke-width="2" opacity="0.3"/>
+</svg>

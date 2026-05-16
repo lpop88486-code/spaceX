@@ -1,0 +1,110 @@
+[build]
+  command = "pnpm --filter @workspace/spacex-starlink build"
+  publish = "artifacts/spacex-starlink/dist/public"
+  functions = "netlify/functions"
+
+[build.environment]
+  PORT = "3000"
+  BASE_PATH = "/"
+
+[functions]
+  node_bundler = "esbuild"
+
+# ── API → Netlify Functions ───────────────────────────────────────────────────
+
+[[redirects]]
+  from    = "/api/healthz"
+  to      = "/.netlify/functions/healthz"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/plans"
+  to      = "/.netlify/functions/get-plans"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/create-checkout-session"
+  to      = "/.netlify/functions/create-checkout-session"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/checkout-success"
+  to      = "/.netlify/functions/checkout-success"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/stripe-webhook"
+  to      = "/.netlify/functions/stripe-webhook"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/admin/login"
+  to      = "/.netlify/functions/admin-login"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/admin/stats"
+  to      = "/.netlify/functions/admin-stats"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/admin/revenue"
+  to      = "/.netlify/functions/admin-revenue"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/admin/plans/:id"
+  to      = "/.netlify/functions/admin-plan?id=:id"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/admin/plans"
+  to      = "/.netlify/functions/admin-plans"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/subscriptions/:id"
+  to      = "/.netlify/functions/update-subscription?id=:id"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/subscriptions"
+  to      = "/.netlify/functions/get-subscriptions"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/paystack-init"
+  to      = "/.netlify/functions/paystack-init"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/paystack-verify"
+  to      = "/.netlify/functions/paystack-verify"
+  status  = 200
+  force   = true
+
+[[redirects]]
+  from    = "/api/paystack-webhook"
+  to      = "/.netlify/functions/paystack-webhook"
+  status  = 200
+  force   = true
+
+# ── SPA fallback ─────────────────────────────────────────────────────────────
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

@@ -1,0 +1,607 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: SpaceXStarlink API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: plans
+    description: Service plan operations
+  - name: checkout
+    description: Stripe checkout operations
+  - name: subscriptions
+    description: Subscription management
+  - name: admin
+    description: Admin dashboard operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: List all service plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+
+  /plans/{id}:
+    get:
+      operationId: getPlan
+      tags: [plans]
+      summary: Get a plan by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Plan details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+        "404":
+          description: Plan not found
+
+  /checkout/session:
+    post:
+      operationId: createCheckoutSession
+      tags: [checkout]
+      summary: Create a Stripe checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionBody"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+        "400":
+          description: Bad request
+
+  /checkout/success:
+    get:
+      operationId: checkoutSuccess
+      tags: [checkout]
+      summary: Handle checkout success
+      parameters:
+        - name: session_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Success confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSuccessResponse"
+
+  /subscriptions:
+    get:
+      operationId: listSubscriptions
+      tags: [subscriptions]
+      summary: List all subscriptions (admin)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, cancelled, past_due, all]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionList"
+
+  /subscriptions/{id}:
+    get:
+      operationId: getSubscription
+      tags: [subscriptions]
+      summary: Get a subscription by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "404":
+          description: Subscription not found
+    patch:
+      operationId: updateSubscription
+      tags: [subscriptions]
+      summary: Update subscription status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubscriptionBody"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResponse"
+        "401":
+          description: Invalid credentials
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/plans:
+    get:
+      operationId: adminListPlans
+      tags: [admin]
+      summary: Admin list all plans including inactive
+      responses:
+        "200":
+          description: All plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+    post:
+      operationId: adminCreatePlan
+      tags: [admin]
+      summary: Create a new plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanBody"
+      responses:
+        "201":
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+
+  /admin/plans/{id}:
+    patch:
+      operationId: adminUpdatePlan
+      tags: [admin]
+      summary: Update a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanBody"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+    delete:
+      operationId: adminDeletePlan
+      tags: [admin]
+      summary: Delete (deactivate) a plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Plan deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+
+  /admin/revenue:
+    get:
+      operationId: getRevenueStats
+      tags: [admin]
+      summary: Get monthly revenue breakdown
+      responses:
+        "200":
+          description: Revenue data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueStats"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [residential, roam, business]
+        speed:
+          type: string
+        priceMonthly:
+          type: number
+        features:
+          type: array
+          items:
+            type: string
+        stripePriceId:
+          type: string
+        active:
+          type: boolean
+        popular:
+          type: boolean
+        description:
+          type: string
+        hardwarePrice:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - speed
+        - priceMonthly
+        - features
+        - active
+        - popular
+        - description
+
+    CreatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [residential, roam, business]
+        speed:
+          type: string
+        priceMonthly:
+          type: number
+        features:
+          type: array
+          items:
+            type: string
+        stripePriceId:
+          type: string
+        popular:
+          type: boolean
+        description:
+          type: string
+        hardwarePrice:
+          type: number
+      required:
+        - name
+        - category
+        - speed
+        - priceMonthly
+        - features
+        - description
+
+    UpdatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        speed:
+          type: string
+        priceMonthly:
+          type: number
+        features:
+          type: array
+          items:
+            type: string
+        stripePriceId:
+          type: string
+        active:
+          type: boolean
+        popular:
+          type: boolean
+        description:
+          type: string
+        hardwarePrice:
+          type: number
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        planId:
+          type: integer
+        planName:
+          type: string
+        planCategory:
+          type: string
+        priceMonthly:
+          type: number
+        stripeSubscriptionId:
+          type: string
+        stripeCustomerId:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, past_due, trialing, incomplete]
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - planId
+        - planName
+        - planCategory
+        - priceMonthly
+        - status
+        - createdAt
+
+    SubscriptionList:
+      type: object
+      properties:
+        subscriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - subscriptions
+        - total
+        - page
+        - limit
+
+    UpdateSubscriptionBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, cancelled, past_due]
+
+    CreateCheckoutSessionBody:
+      type: object
+      properties:
+        planId:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+      required:
+        - planId
+        - email
+        - name
+
+    CheckoutSession:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        url:
+          type: string
+      required:
+        - sessionId
+        - url
+
+    CheckoutSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        subscription:
+          $ref: "#/components/schemas/Subscription"
+      required:
+        - success
+
+    AdminLoginBody:
+      type: object
+      properties:
+        password:
+          type: string
+      required:
+        - password
+
+    AdminLoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+      required:
+        - success
+        - token
+
+    AdminStats:
+      type: object
+      properties:
+        totalSubscriptions:
+          type: integer
+        activeSubscriptions:
+          type: integer
+        cancelledSubscriptions:
+          type: integer
+        monthlyRevenue:
+          type: number
+        totalRevenue:
+          type: number
+        newThisMonth:
+          type: integer
+        planBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              planName:
+                type: string
+              count:
+                type: integer
+              revenue:
+                type: number
+            required:
+              - planName
+              - count
+              - revenue
+        recentSubscriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+      required:
+        - totalSubscriptions
+        - activeSubscriptions
+        - cancelledSubscriptions
+        - monthlyRevenue
+        - totalRevenue
+        - newThisMonth
+        - planBreakdown
+        - recentSubscriptions
+
+    RevenueStats:
+      type: object
+      properties:
+        monthly:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+              revenue:
+                type: number
+              subscriptions:
+                type: integer
+            required:
+              - month
+              - revenue
+              - subscriptions
+      required:
+        - monthly

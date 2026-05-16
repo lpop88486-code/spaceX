@@ -1,0 +1,135 @@
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { subscriptionsTable, plansTable } from "@workspace/db";
+import { eq, desc, count } from "drizzle-orm";
+import { sendCancellationEmail } from "../lib/email";
+
+const router = Router();
+
+function formatSub(sub: typeof subscriptionsTable.$inferSelect, plan: typeof plansTable.$inferSelect | null) {
+  return {
+    id: sub.id,
+    email: sub.email,
+    name: sub.name,
+    planId: sub.planId,
+    planName: plan?.name ?? "",
+    planCategory: plan?.category ?? "",
+    planSpeed: plan?.speed ?? "",
+    priceMonthly: plan ? parseFloat(plan.priceMonthly) : 0,
+    features: plan?.features ?? [],
+    stripeSubscriptionId: sub.stripeSubscriptionId,
+    stripeCustomerId: sub.stripeCustomerId,
+    status: sub.status,
+    address: sub.address,
+    createdAt: sub.createdAt,
+    cancelledAt: sub.cancelledAt,
+  };
+}
+
+router.get("/subscriptions", async (req, res): Promise<void> => {
+  try {
+    const status = req.query.status as string | undefined;
+    const email = req.query.email as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+
+    let whereClause: any;
+    if (email) {
+      whereClause = eq(subscriptionsTable.email, email.toLowerCase());
+    } else if (status && status !== "all") {
+      whereClause = eq(subscriptionsTable.status, status);
+    }
+
+    const rows = await db
+      .select({ sub: subscriptionsTable, plan: plansTable })
+      .from(subscriptionsTable)
+      .leftJoin(plansTable, eq(subscriptionsTable.planId, plansTable.id))
+      .where(whereClause)
+      .orderBy(desc(subscriptionsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(subscriptionsTable)
+      .where(whereClause);
+
+    res.json({
+      subscriptions: rows.map((r) => formatSub(r.sub, r.plan)),
+      total,
+      page,
+      limit,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list subscriptions");
+    res.status(500).json({ error: "Failed to list subscriptions" });
+  }
+});
+
+router.get("/subscriptions/:id", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+
+    const [row] = await db
+      .select({ sub: subscriptionsTable, plan: plansTable })
+      .from(subscriptionsTable)
+      .leftJoin(plansTable, eq(subscriptionsTable.planId, plansTable.id))
+      .where(eq(subscriptionsTable.id, id));
+
+    if (!row) {
+      res.status(404).json({ error: "Subscription not found" });
+      return;
+    }
+    res.json(formatSub(row.sub, row.plan));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get subscription");
+    res.status(500).json({ error: "Failed to get subscription" });
+  }
+});
+
+router.patch("/subscriptions/:id", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    const { status } = req.body;
+    const updateData: Record<string, unknown> = { status };
+    if (status === "cancelled") updateData.cancelledAt = new Date();
+
+    const [updated] = await db
+      .update(subscriptionsTable)
+      .set(updateData)
+      .where(eq(subscriptionsTable.id, id))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Subscription not found" });
+      return;
+    }
+
+    const [plan] = await db.select().from(plansTable).where(eq(plansTable.id, updated.planId));
+
+    if (status === "cancelled" && plan) {
+      sendCancellationEmail({
+        customerName: updated.name,
+        customerEmail: updated.email,
+        planName: plan.name,
+        priceMonthly: parseFloat(plan.priceMonthly),
+      }).catch(() => {});
+    }
+
+    res.json(formatSub(updated, plan ?? null));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update subscription");
+    res.status(500).json({ error: "Failed to update subscription" });
+  }
+});
+
+export default router;
